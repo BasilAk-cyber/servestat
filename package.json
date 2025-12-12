@@ -1,20 +1,26 @@
 {
   "name": "servestat",
   "version": "1.0.0",
-  "description": "",
+  "description": "A simple, secure static file server with directory traversal protection",
   "main": "index.js",
-  "scripts": {
-    "start": "node index",
-    "dev": "nodemon index"
+  "bin": {
+    "servestat": "./cli.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "keywords": ["static-server", "file-server", "http-server", "cli"],
+  "author": "Akanifiok Basil",
+  "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
     "nodemon": "^3.1.11"
   },
   "dependencies": {
     "chalk": "^4.1.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   }
 }

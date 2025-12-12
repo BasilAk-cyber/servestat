@@ -4,20 +4,7 @@ const fsPromises = require('fs').promises;
 const path = require('path');
 const chalk = require('chalk');
 
-const PORT = 3000;
-
-let folder = process.argv[2];
-const fileExist = fs.existsSync(folder);
-
-if (!folder || !fileExist){
-    console.error(chalk.red.bold('❌ ERROR: ') + chalk.white('Folder is not valid'));
-    return;
-}
-
-console.log(`Server will serve files from: ${path.resolve(folder)}`);
-
-
-
+//Handles file serving
 const serveFile = async (filepath, response, contentType) => {
 
     try {
@@ -27,7 +14,7 @@ const serveFile = async (filepath, response, contentType) => {
         response.writeHead(200, {'Content-Type': contentType});
         response.end(rawData);
 
-        console.log(chalk.green('   ✓ Served: ') + chalk.gray(filepath));
+        console.log(chalk.greenBright('   ✓ Served: ') + chalk.gray(filepath));
         
     } catch (error) {
         console.error(error);
@@ -37,7 +24,31 @@ const serveFile = async (filepath, response, contentType) => {
 
 }
 
-const server = http.createServer( async (req, res) => {
+const serve404 = async (res) => {
+    try {
+        
+        const errorPage = await fsPromises.readFile(path.join(__dirname, '404.html'), 'utf8')
+        res.writeHead(404, { 'Content-Type': 'text/html' });
+        res.end(errorPage);
+
+    } catch (error) {
+        res.writeHead(404, { 'Content-Type': 'text/html' });
+        res.end('<h1>404 - Page Not Found</h1>');
+    }
+}
+
+
+//Serves the file
+function startServer(folder) {
+
+    const PORT = 3000;
+
+    //let folder = process.argv[2];
+
+    console.log(`Server will serve files from: ${path.resolve(folder)}`);
+
+
+    const server = http.createServer( async (req, res) => {
 
     console.log(chalk.blue.bold('\n📨 Incoming Request  '));
     console.log(`${chalk.gray('   Method: ')}  ${chalk.cyan.italic(req.method)}`);
@@ -66,18 +77,30 @@ const server = http.createServer( async (req, res) => {
         '.txt' : 'text/plain; charset=utf-8',
     };
 
-   
+   // Serves the file pa
     try {
 
-         const stats = await fsPromises.stat(filePath);
+        const stats = await fsPromises.stat(filePath);
 
         let contentType;
+
+        // Displays index.html when no request url is parsed
         if (stats.isDirectory()) {
+
             console.log(chalk.green(`  → Directory detected, looking for index.html`));
             filePath = path.join(filePath, 'index.html');
             contentType = "text/html";
-            await serveFile(filePath, res, contentType);
+
+            try {
+                await serveFile(filePath, res, contentType);
+            } catch (error) {
+                console.error(chalk.red(`✗ No index.html found in directory`));
+                await serve404(res);
+            }
+
         }else{
+
+            //Serves exact file parsed to request url
             const extName = path.parse(filePath).ext.toLowerCase();
 
             contentType = contentTypes[extName] || 'application/octet-stream' ;
@@ -88,14 +111,17 @@ const server = http.createServer( async (req, res) => {
 
     } catch (error) {
         console.error(chalk.red(`✗ Not found: ${filePath}`));
-        res.writeHead(404, { 'Content-Type': 'text/html' });
-        res.end('<h1>404 - File Not Found</h1>');
+        await serve404(res);
     }
 
-});
+    });
 
-server.listen(PORT, () => {
-    console.log(`${chalk.green.bold.italic('🚀 Server running ')}  ${chalk.blue.underline(`on http://localhost:${PORT}`)}`)
-    console.log(`${chalk.white('📁 Serving files from: ')}   ${chalk.yellow(`${path.resolve(folder)}`)}`)
-    console.log(`${chalk.gray('  Press Ctrl+C to stop the server\n')}`);
-});
+    server.listen(PORT, () => {
+        console.log(`${chalk.green.bold.italic('🚀 Server running ')}  ${chalk.blueBright.underline(`on http://localhost:${PORT}`)}`)
+        console.log(`${chalk.white('📁 Serving files from: ')}   ${chalk.yellow(`${path.resolve(folder)}`)}`)
+        console.log(`${chalk.gray('  Press Ctrl+C to stop the server\n')}`);
+    });
+}
+
+
+module.exports = { startServer };
